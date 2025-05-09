@@ -3,6 +3,7 @@ from fastapi_mcp import FastApiMCP
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.groups.routes import router as tools_router
+from app.groups.requests_routes import router as requests_router
 import logging
 import os
 
@@ -20,10 +21,11 @@ app.add_middleware(
 )
 
 # Register routers
-def register_tools(app: FastAPI):
+def register_routers(app: FastAPI):
     app.include_router(tools_router, prefix="/tools")
+    app.include_router(requests_router, prefix="/tools")  # Já tem seu próprio prefixo /requests
 
-register_tools(app)
+register_routers(app)
 
 # Middleware de logging detalhado
 def setup_middlewares(app: FastAPI):

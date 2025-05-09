@@ -8,8 +8,12 @@ from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
 def get_rbac_data() -> Dict:
-    rbac_path = Path(settings.GROUPS_FILE).parent / 'rbac.json'
+    # Corrigido para usar settings.RBAC_FILE em vez de settings.GROUPS_FILE
+    rbac_path = Path(settings.RBAC_FILE) 
     try:
+        # Assegura que estamos usando o caminho completo definido em RBAC_FILE
+        # Não precisamos mais adicionar .parent / 'rbac.json' se RBAC_FILE já é o caminho completo.
+        # Se RBAC_FILE for apenas o nome do arquivo e estiver em data/, então o config.py já resolve isso.
         with open(rbac_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:

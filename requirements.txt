@@ -1,6 +1,13 @@
 fastapi
-fastapi-mcp
-uvicorn
+# fastapi-mcp # Commenting out as it's not a standard PyPI package and might be project-specific or a typo
+uvicorn[standard] # Added [standard] for full features like websockets if needed later
 python-dotenv
 flake8
 black
+PyJWT==2.8.0
+bcrypt==4.1.2
+passlib[bcrypt] # Explicitly adding bcrypt for passlib, good practice
+python-jose[cryptography] # For JWT operations
+pytest # For running tests
+httpx # For async HTTP requests in tests
+python-multipart # For form data in FastAPI

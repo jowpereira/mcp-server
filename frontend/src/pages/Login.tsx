@@ -1,37 +1,44 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useApiError } from '../utils/errorHandling';
+import useLoading from '../hooks/useLoading';
+import LoadingSpinner from '../components/LoadingSpinner';
 import '../App.css';
 
-type LoginProps = {
-  onLogin: (token: string) => void;
-};
-
-const Login = ({ onLogin }: LoginProps) => {
+const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const { processApiResponse, handleApiError } = useApiError();
+  const { isLoading, execute } = useLoading();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    
     try {
-      const res = await fetch('/tools/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ detail: 'Usuário ou senha inválidos' }));
-        throw new Error(errorData.detail || 'Usuário ou senha inválidos');
-      }
-      const data = await res.json();
-      onLogin(data.access_token);
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        setError(error.message || 'Erro ao autenticar. Tente novamente.');
-      } else {
-        setError('Erro ao autenticar. Tente novamente.');
-      }
+      const result = await execute(
+        fetch('/tools/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        })
+      );
+      
+      if (!result) return; // Já tratado pelo execute
+      
+      const hasError = await processApiResponse(result);
+      
+      if (hasError) return;
+      
+      const data = await result.json();
+      console.log('Login successful, token received');
+      login(data.access_token);
+      navigate('/dashboard');
+    } catch (error) {
+      handleApiError(error);
     }
   };
 
@@ -48,6 +55,7 @@ const Login = ({ onLogin }: LoginProps) => {
             value={username}
             onChange={e => setUsername(e.target.value)}
             required
+            disabled={isLoading}
           />
         </div>
         <div className="form-group">
@@ -59,12 +67,16 @@ const Login = ({ onLogin }: LoginProps) => {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
+            disabled={isLoading}
           />
         </div>
         <div className="button-group">
-          <button type="submit">Entrar</button>
+          {isLoading ? (
+            <LoadingSpinner size="small" />
+          ) : (
+            <button type="submit">Entrar</button>
+          )}
         </div>
-        {error && <div className="error-message">{error}</div>}
       </form>
     </div>
   );

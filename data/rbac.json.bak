@@ -23,17 +23,11 @@
       "ferramentas": [
         "ferramenta_z"
       ]
-    },
-    "grupo_chupetinha": {
-      "descricao": "qwq",
-      "admins": [],
-      "users": [],
-      "ferramentas": []
     }
   },
   "usuarios": {
     "superadmin": {
-      "senha": "$2b$12$wuBWkmokiHhmg/IVBra47.h9Et7RiSZsGMcIV18r.EXdNg7iAjlWy",
+      "senha": "$2b$12$eOavf3mG3rEnGLNDBf4Pk.fTGP8DXHYzRSMgNQCq7ZOFZhGLfazEi",
       "grupos": [],
       "papel": "global_admin"
     },
