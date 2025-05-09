@@ -1,0 +1,22 @@
+{
+  "grupos": {
+    "projeto_a": {
+      "admins": ["alice"],
+      "users": ["bob", "carol"],
+      "ferramentas": ["ferramenta_x", "ferramenta_y"]
+    },
+    "projeto_b": {
+      "admins": ["dave"],
+      "users": ["eve"],
+      "ferramentas": ["ferramenta_z"]
+    }
+  },
+  "usuarios": {
+    "superadmin": {"senha": "super123", "grupos": [], "papel": "global_admin"},
+    "alice": {"senha": "admin123", "grupos": ["projeto_a"], "papel": "admin"},
+    "bob": {"senha": "bob123", "grupos": ["projeto_a"], "papel": "user"},
+    "carol": {"senha": "carol123", "grupos": ["projeto_a"], "papel": "user"},
+    "dave": {"senha": "admin456", "grupos": ["projeto_b"], "papel": "admin"},
+    "eve": {"senha": "eve456", "grupos": ["projeto_b"], "papel": "user"}
+  }
+}
