@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import '../App.css'; // Ensure App.css is imported
+import '../App.css';
 
 type ToolsProps = {
   token: string;
+  user: any;
 };
 
-const Tools = ({ token }: ToolsProps) => {
+const Tools = ({ token, user }: ToolsProps) => {
   const [tools, setTools] = useState<string[]>([]);
   const [error, setError] = useState('');
 
@@ -13,30 +14,24 @@ const Tools = ({ token }: ToolsProps) => {
     const fetchTools = async () => {
       setError('');
       try {
-        // TODO: Replace with a generic endpoint to list all available tools for the user
-        // For now, it attempts to access 'ferramenta_x' and infers availability.
-        const res = await fetch('/tools/ferramenta_x', { // Example endpoint
+        // Exemplo: buscar ferramentas do grupo do usuário
+        // Aqui, só um placeholder para /tools/ferramenta_x
+        const res = await fetch('/tools/ferramenta_x', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.status === 403) {
-          setTools([]);
-          setError('Você não tem permissão para acessar a ferramenta_x ou ela não existe.');
-        } else if (res.ok) {
-          // Assuming success means this specific tool is available
-          // In a real scenario, the endpoint would return a list of tools.
-          setTools(['ferramenta_x (Exemplo)']);
+        if (res.ok) {
+          setTools(['ferramenta_x']);
         } else {
-          const errorData = await res.json().catch(() => null);
-          setError(errorData?.detail || 'Erro ao buscar ferramentas.');
           setTools([]);
+          setError('Você não tem permissão para acessar ferramentas ou nenhuma disponível.');
         }
-      } catch (_error: unknown) { // Corrigido: tipado como unknown e prefixado com _
+      } catch {
         setError('Erro de conexão ao buscar ferramentas.');
         setTools([]);
       }
     };
     fetchTools();
-  }, [token]);
+  }, [token, user]);
 
   return (
     <div className="card">

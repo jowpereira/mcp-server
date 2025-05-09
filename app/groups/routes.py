@@ -24,16 +24,27 @@ def setup_middlewares(app: FastAPI):
 async def login(data: dict):
     username: Optional[str] = data.get("username")
     password: Optional[str] = data.get("password")
+
     if not username or not password:
         logger.warning("Tentativa de login sem usuário ou senha.")
         raise HTTPException(status_code=400, detail="Usuário e senha obrigatórios.")
-    user = authenticate_user(username, password)
-    if not user:
-        logger.warning(f"Tentativa de login inválida para usuário '{username}'")
-        raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
-    token = create_jwt_for_user(username)
-    logger.info(f"Usuário '{username}' autenticado com sucesso")
-    return {"access_token": token, "token_type": "bearer"}
+
+    try:
+        user = authenticate_user(username, password)
+        if not user:
+            logger.warning(f"Tentativa de login inválida para usuário '{username}'")
+            raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
+        
+        token = create_jwt_for_user(username)
+        logger.info(f"Usuário '{username}' autenticado com sucesso")
+        return {"access_token": token, "token_type": "bearer"}
+    except HTTPException as http_exc:
+        # Re-levantar HTTPExceptions para que o FastAPI as trate como de costume
+        raise http_exc
+    except Exception as e:
+        # Capturar quaisquer outras exceções, logá-las com traceback, e retornar um erro 500 genérico
+        logger.error(f"Erro inesperado durante o login para o usuário '{username}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ocorreu um erro interno no servidor durante o login. Verifique os logs do servidor para mais detalhes.")
 
 # Exemplo de rota pública (healthcheck)
 @router.get('/health', tags=["Infra"], summary="Healthcheck", description="Verifica se o serviço está online.")

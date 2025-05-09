@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi_mcp import FastApiMCP
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from app.groups.routes import router as tools_router
 import logging
 import os
@@ -8,6 +9,15 @@ import os
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="MCP Gateway", docs_url="/docs", redoc_url="/redoc")
+
+# CORS para desenvolvimento local
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 # Register routers
 def register_tools(app: FastAPI):

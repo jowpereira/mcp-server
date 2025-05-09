@@ -3,11 +3,12 @@ import '../App.css'; // Ensure App.css is imported
 
 type DashboardProps = {
   token: string;
+  user: any;
 };
 
-const Dashboard = ({ token }: DashboardProps) => {
+const Dashboard = ({ token, user }: DashboardProps) => {
   const [allGroups, setAllGroups] = useState<string[]>([]);
-  const [myGroups, setMyGroups] = useState<string[]>([]);
+  const [myGroups, setMyGroups] = useState<string[]>(user?.grupos || []);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -37,14 +38,12 @@ const Dashboard = ({ token }: DashboardProps) => {
     };
     const fetchMyGroups = async () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log("[Dashboard] Decoded JWT payload:", payload);
-        setMyGroups(payload.grupos || []);
-        const userIsAdmin = payload.papel === 'global_admin' || payload.papel === 'admin';
+        setMyGroups(user?.grupos || []);
+        const userIsAdmin = user?.papel === 'global_admin' || user?.papel === 'admin';
         setIsAdmin(userIsAdmin);
-        console.log("[Dashboard] isAdmin state set to:", userIsAdmin, "(based on papel:", payload.papel, ")");
+        console.log("[Dashboard] isAdmin state set to:", userIsAdmin, "(based on papel:", user?.papel, ")");
       } catch (err) {
-        console.error("[Dashboard] Error decoding token or setting admin status:", err);
+        console.error("[Dashboard] Error setting admin status:", err);
         setMyGroups([]);
         setIsAdmin(false);
       }
@@ -57,7 +56,7 @@ const Dashboard = ({ token }: DashboardProps) => {
         setMyGroups([]);
         setIsAdmin(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   useEffect(() => {
     console.log("[Dashboard] Admin groups effect triggered. isAdmin:", isAdmin, "Current allGroups:", allGroups);
@@ -67,24 +66,23 @@ const Dashboard = ({ token }: DashboardProps) => {
     }
     const fetchAdminGroups = () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log("[Dashboard] Setting admin groups. User papel:", payload.papel);
-        if (payload.papel === 'global_admin') {
+        console.log("[Dashboard] Setting admin groups. User papel:", user?.papel);
+        if (user?.papel === 'global_admin') {
           console.log("[Dashboard] User is global_admin. Setting adminGroups to allGroups:", allGroups);
           setAdminGroups(allGroups);
-        } else if (payload.papel === 'admin') {
+        } else if (user?.papel === 'admin') {
           console.log("[Dashboard] User is admin. Setting adminGroups to myGroups:", myGroups);
           setAdminGroups(myGroups);
         } else {
           setAdminGroups([]);
         }
       } catch (err) {
-        console.error("[Dashboard] Error decoding token in fetchAdminGroups:", err);
+        console.error("[Dashboard] Error in fetchAdminGroups:", err);
         setAdminGroups([]);
       }
     };
     fetchAdminGroups();
-  }, [isAdmin, allGroups, myGroups, token]);
+  }, [isAdmin, allGroups, myGroups, token, user]);
 
   useEffect(() => {
     console.log("[Dashboard] Pending requests effect triggered. isAdmin:", isAdmin, "Admin groups:", adminGroups);
@@ -184,8 +182,8 @@ const Dashboard = ({ token }: DashboardProps) => {
   return (
     <>
       <div className="card">
-        <h2>Dashboard</h2>
-        <p>Bem-vindo ao Portal MCP Gateway!</p>
+        <h2>Bem-vindo, {user?.sub || 'usuário'}!</h2>
+        <p>Papel: <b>{user?.papel}</b></p>
         <p>Aqui você pode visualizar seus grupos, solicitar acesso a novos grupos e, se for admin, gerenciar solicitações.</p>
       </div>
 
