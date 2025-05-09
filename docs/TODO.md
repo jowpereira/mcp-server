@@ -119,12 +119,25 @@
 5.  **Testes**
     *   [ ] Adicionar testes unitários no backend (pytest) para lógica de negócios, auth, utils.
     *   [ ] Adicionar testes de integração para APIs do backend.
-    *   [ ] Implementar testes de frontend (Jest, Testing Library) para componentes e fluxos.
-    *   [ ] Configurar CI/CD para execução automática de testes.
+        *   [x] Configurar ambiente de teste (pytest.ini, .env.test, conftest.py com fixtures).
+        *   [x] Implementar testes de integração para API de Autenticação (`/tools/login`, `/tools/refresh-token`).
+        *   [x] Implementar testes de integração para API de Gerenciamento de Grupos (Admin Global: Criar, Listar, Editar, Deletar).
+        *   [x] Implementar testes de integração para API de Gerenciamento de Usuários em Grupos (Admin de Grupo/Global: Adicionar/Remover Usuários/Admins de grupo, Promover, Listar usuários do grupo).
+        *   [x] Implementar testes de integração para API de Gerenciamento de Ferramentas em Grupos (Admin Global: Adicionar/Remover ferramentas).
+        *   [x] Implementar testes de integração para API de Gerenciamento de Usuários (Admin Global: CRUD de usuários - **CONCLUÍDO**).
+            *   [x] `POST /tools/usuarios` (Criar usuário)
+            *   [x] `GET /tools/usuarios` (Listar usuários)
+            *   [x] `GET /tools/usuarios/{username}` (Detalhar usuário)
+            *   [x] `PUT /tools/usuarios/{username}` (Atualizar usuário)
+            *   [x] `DELETE /tools/usuarios/{username}` (Remover usuário)
+        *   [ ] Implementar testes de integração para API de Solicitações de Acesso a Grupos.
+        *   [ ] Implementar testes de integração para Endpoints de Ferramentas de Exemplo e Acesso a Ferramentas.
+        *   [ ] Implementar testes de integração para `GET /grupos/disponivel`.
 
 6.  **Documentação**
     *   [ ] Melhorar documentação da API (Swagger/OpenAPI gerada pelo FastAPI) com exemplos de request/response mais detalhados e descrições claras.
     *   [ ] Criar documentação para desenvolvedores (como estender o sistema, adicionar novas ferramentas, configurar o ambiente).
+    *   [x] Gerar documentação técnica detalhada do backend para basear a criação de testes.
     *   [ ] Adicionar mais comentários no código (backend e frontend) para facilitar manutenção.
     *   [ ] Criar tutoriais visuais ou guias rápidos para usuários finais e administradores sobre como usar o portal.
 
