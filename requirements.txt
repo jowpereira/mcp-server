@@ -2,3 +2,5 @@ fastapi
 fastapi-mcp
 uvicorn
 python-dotenv
+flake8
+black

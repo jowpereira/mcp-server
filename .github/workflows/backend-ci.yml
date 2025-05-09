@@ -1,0 +1,38 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ] # Ajuste se o branch de desenvolvimento for outro
+  pull_request:
+    branches: [ main, develop ] # Ajuste se o branch de desenvolvimento for outro
+
+jobs:
+  lint-and-test:
+    name: Lint and Test Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Versão do Python indicada pelos arquivos __pycache__
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run linters (Flake8)
+        run: flake8 app/
+
+      - name: Check formatting (Black)
+        run: black --check app/
+
+      # Adicione uma etapa de teste aqui se você tiver testes
+      # Exemplo com unittest:
+      # - name: Run tests (unittest)
+      #   run: python -m unittest discover -s app/tests
+      # Exemplo com pytest:
+      # - name: Run tests (pytest)
+      #   run: pytest app/tests

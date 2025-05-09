@@ -1,0 +1,133 @@
+/* App.css */
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  /* text-align: center; /* Remove global text-align center */
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header {
+  padding: 1rem 2rem;
+  background-color: #fff; /* White header */
+  border-bottom: 1px solid #dee2e6; /* Light border */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 1.8em;
+  margin: 0;
+  color: #007bff;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 0 2rem;
+}
+
+.card {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Subtle shadow */
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  box-sizing: border-box; /* Ensure padding doesn't expand width */
+}
+
+.button-group {
+  margin-top: 1rem;
+}
+
+.button-group button + button {
+  margin-left: 0.5rem;
+}
+
+.list-group {
+  list-style: none;
+  padding: 0;
+}
+
+.list-group-item {
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #dee2e6;
+  border-top-width: 0;
+  margin-bottom: -1px; /* Overlap borders */
+}
+
+.list-group-item:first-child {
+  border-top-width: 1px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.list-group-item:last-child {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.list-group-item button {
+  margin-left: 1rem;
+  padding: 0.3em 0.8em;
+  font-size: 0.9em;
+}
+
+.success-message {
+  color: #155724; /* Dark green */
+  background-color: #d4edda; /* Light green background */
+  border: 1px solid #c3e6cb;
+  padding: 0.75rem 1.25rem;
+  margin-top: 1rem;
+  border-radius: 6px;
+}
+
+.error-message {
+  color: #721c24; /* Dark red */
+  background-color: #f8d7da; /* Light red background */
+  border: 1px solid #f5c6cb;
+  padding: 0.75rem 1.25rem;
+  margin-top: 1rem;
+  border-radius: 6px;
+}
+
+.login-card {
+  max-width: 400px;
+  margin: 4rem auto;
+}
+
+.dashboard-section-spacing {
+  margin-bottom: 1rem;
+}
+
+.list-item-actions {
+  margin-left: auto; /* Pushes actions to the right */
+}
+
+.action-button-spacing {
+  margin-right: 0.5rem;
+}
+
+.message-spacing {
+  margin-top: 1rem;
+}

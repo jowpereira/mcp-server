@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi_mcp import FastApiMCP
+from fastapi.staticfiles import StaticFiles
 from app.groups.routes import router as tools_router
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,6 +28,11 @@ setup_middlewares(app)
 
 # MCP exposure
 doc_mcp = FastApiMCP(app)
+
+# Serve frontend build (React/Vite) como estático
+FRONTEND_DIST = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'dist')
+if os.path.exists(FRONTEND_DIST):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
 
 @app.get("/")
 def root():

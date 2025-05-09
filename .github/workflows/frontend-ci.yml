@@ -1,0 +1,34 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main, develop ] # Ajuste se o branch de desenvolvimento for outro
+  pull_request:
+    branches: [ main, develop ] # Ajuste se o branch de desenvolvimento for outro
+
+jobs:
+  lint-and-build:
+    name: Lint and Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x' # Usando uma versão LTS recente do Node.js
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json # Assumindo que package-lock.json será gerado
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run linters
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Run build
+        working-directory: ./frontend
+        run: npm run build
