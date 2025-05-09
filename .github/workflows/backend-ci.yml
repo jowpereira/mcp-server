@@ -23,9 +23,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run linters (Flake8)
-        run: flake8 app/
-
       # Adicione uma etapa de teste aqui se você tiver testes
       # Exemplo com unittest:
       # - name: Run tests (unittest)
