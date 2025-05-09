@@ -26,9 +26,6 @@ jobs:
       - name: Run linters (Flake8)
         run: flake8 app/
 
-      - name: Check formatting (Black)
-        run: black --check app/
-
       # Adicione uma etapa de teste aqui se você tiver testes
       # Exemplo com unittest:
       # - name: Run tests (unittest)

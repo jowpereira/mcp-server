@@ -30,7 +30,7 @@ const Tools = ({ token }: ToolsProps) => {
           setError(errorData?.detail || 'Erro ao buscar ferramentas.');
           setTools([]);
         }
-      } catch (err: any) {
+      } catch (_error: unknown) { // Corrigido: tipado como unknown e prefixado com _
         setError('Erro de conexão ao buscar ferramentas.');
         setTools([]);
       }

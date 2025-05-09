@@ -26,8 +26,12 @@ const Login = ({ onLogin }: LoginProps) => {
       }
       const data = await res.json();
       onLogin(data.access_token);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao autenticar. Tente novamente.');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message || 'Erro ao autenticar. Tente novamente.');
+      } else {
+        setError('Erro ao autenticar. Tente novamente.');
+      }
     }
   };
 
