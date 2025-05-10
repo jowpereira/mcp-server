@@ -1,8 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
+from fastapi import Request
+from fastapi.exception_handlers import request_validation_exception_handler
 from app.auth import authenticate_user, create_jwt_for_user, get_current_user, validate_and_hash_password, verify_password
 from app.utils.dependencies import get_rbac_data
 from app.utils.password import hash_password, migrate_rbac_passwords
+from app.utils.rbac_utils import is_group_admin_or_global
 import logging
 from typing import Optional, List, Dict, Any
 from datetime import timedelta
@@ -10,6 +15,8 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+ALLOWED_ROLES = {"user", "admin", "global_admin"}
 
 # Middleware de logging detalhado
 from fastapi import FastAPI
@@ -91,47 +98,29 @@ async def health():
     return {"status": "ok"}
 
 # Exemplo de rota para listar grupos (apenas admin global)
-@router.get('/grupos', response_model=List[GroupDetailSchema], tags=["Admin"], summary="Listar grupos detalhadamente", description="Lista todos os grupos com detalhes. Apenas para admin global.")
+@router.get('/grupos', tags=["Admin"], summary="Listar grupos", description="Lista todos os grupos com detalhes.")
 async def listar_grupos(user=Depends(get_current_user)):
+    rbac = get_rbac_data()
     if user["papel"] != "global_admin":
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin global.")
-    rbac = get_rbac_data()
-    grupos_detalhados = []
-    all_tools_definitions = rbac.get("ferramentas", {})
-
-    for nome_grupo, detalhes_grupo_data in rbac.get("grupos", {}).items():
-        ferramentas_do_grupo_obj = []
-        nomes_ferramentas_no_grupo = detalhes_grupo_data.get("ferramentas", [])
-        if not isinstance(nomes_ferramentas_no_grupo, list):
-            nomes_ferramentas_no_grupo = []
-
-        for nome_ferramenta in nomes_ferramentas_no_grupo:
-            tool_def = all_tools_definitions.get(nome_ferramenta)
-            if tool_def and isinstance(tool_def, dict):
-                ferramentas_do_grupo_obj.append(ToolResponseSchema(
-                    id=nome_ferramenta,
-                    nome=nome_ferramenta,
-                    url_base=tool_def.get("url_base", ""),
-                    descricao=tool_def.get("descricao")
-                ))
+    grupos = []
+    ferramentas_globais = rbac.get("ferramentas", {})
+    for nome, g in rbac["grupos"].items():
+        ferramentas_disponiveis = []
+        for tool_id in g.get("ferramentas", []):
+            tool = ferramentas_globais.get(tool_id)
+            if tool:
+                ferramentas_disponiveis.append({"id": tool_id, **tool})
             else:
-                ferramentas_do_grupo_obj.append(ToolResponseSchema(
-                    id=nome_ferramenta,
-                    nome=nome_ferramenta,
-                    url_base="", 
-                    descricao="Definição da ferramenta não encontrada ou inválida"
-                ))
-        
-        grupo_detalhado = GroupDetailSchema(
-            id=nome_grupo,
-            nome=nome_grupo,
-            descricao=detalhes_grupo_data.get("descricao"),
-            administradores=detalhes_grupo_data.get("admins", []),
-            usuarios=detalhes_grupo_data.get("users", []),
-            ferramentas_disponiveis=ferramentas_do_grupo_obj
-        )
-        grupos_detalhados.append(grupo_detalhado)
-    return grupos_detalhados
+                ferramentas_disponiveis.append({"id": tool_id, "nome": tool_id})
+        grupos.append({
+            "nome": nome,
+            "descricao": g.get("descricao", ""),
+            "administradores": g.get("admins", []),
+            "usuarios": g.get("users", []),
+            "ferramentas_disponiveis": ferramentas_disponiveis
+        })
+    return grupos
 
 # RF02: Criar grupo (admin global)
 class CreateGroupRequest(BaseModel):
@@ -158,9 +147,9 @@ async def criar_grupo(data: CreateGroupRequest, user=Depends(get_current_user)):
         "users": [], 
         "ferramentas": []
     }
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     logger.info(f"Grupo '{nome}' criado por {user['username']}")
@@ -209,9 +198,9 @@ async def editar_grupo(grupo: str, data: EditGroupRequest, user=Depends(get_curr
     if not updated and novo_nome is None and nova_descricao is None:
          return JSONResponse(content={"message": "Nenhuma alteração fornecida."}, status_code=200)
 
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     logger.info(f"Grupo '{grupo}' editado por {user['username']}")
@@ -225,10 +214,17 @@ async def remover_grupo(grupo: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin global.")
     if grupo not in rbac["grupos"]:
         raise HTTPException(status_code=404, detail="Grupo não encontrado.")
+    # Remover grupo da lista de grupos e admin_de_grupos dos usuários
+    for username, user_data in rbac["usuarios"].items():
+        if "grupos" in user_data and grupo in user_data["grupos"]:
+            user_data["grupos"].remove(grupo)
+        if "admin_de_grupos" in user_data and grupo in user_data["admin_de_grupos"]:
+            user_data["admin_de_grupos"].remove(grupo)
+    # Remove group from rbac
     rbac["grupos"].pop(grupo)
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     logger.info(f"Grupo '{grupo}' removido por {user['username']}")
@@ -245,22 +241,20 @@ async def designar_admin_grupo(grupo: str, data: dict, user=Depends(get_current_
     novo_admin = data.get("username")
     if not novo_admin or novo_admin not in rbac["usuarios"]:
         raise HTTPException(status_code=400, detail="Usuário inválido.")
-    
-    if novo_admin not in rbac["grupos"][grupo].get("users", []):
+    # Mensagem de erro exata para usuário não-membro
+    if novo_admin not in rbac["grupos"][grupo]["users"]:
         raise HTTPException(status_code=400, detail=f"Usuário '{novo_admin}' não é membro do grupo '{grupo}'. Adicione como membro primeiro.")
-
-    if novo_admin not in rbac["grupos"][grupo].get("admins", []):
-        rbac["grupos"][grupo].setdefault("admins", []).append(novo_admin)
-    
-    if rbac["usuarios"][novo_admin].get("papel") != "global_admin":
-        rbac["usuarios"][novo_admin]["papel"] = "admin"
-    
-    from pathlib import Path
+    if novo_admin not in rbac["grupos"][grupo]["admins"]:
+        rbac["grupos"][grupo]["admins"].append(novo_admin)
+    if grupo not in rbac["usuarios"][novo_admin]["grupos"]:
+        rbac["usuarios"][novo_admin]["grupos"].append(grupo)
+    rbac["usuarios"][novo_admin]["papel"] = "admin"
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
-    logger.info(f"Usuário '{novo_admin}' promovido a admin do grupo '{grupo}' por {user['username']}")
+    logger.info(f"Usuário '{novo_admin}' designado admin do grupo '{grupo}' por {user['username']}")
     return {"message": f"Usuário '{novo_admin}' agora é admin do grupo '{grupo}'"}
 
 @router.delete('/grupos/{grupo}/admins/{username_param}', tags=["Admin"], summary="Remover admin de grupo", description="Admin global ou outro admin do grupo pode remover um admin (não a si mesmo, a menos que seja o último e admin global).")
@@ -302,9 +296,9 @@ async def remover_admin_de_grupo(grupo: str, username_param: str, current_user_i
     if not is_admin_elsewhere:
         rbac["usuarios"][username_param]["papel"] = "user"
 
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     
@@ -315,43 +309,57 @@ async def remover_admin_de_grupo(grupo: str, username_param: str, current_user_i
 @router.post('/grupos/{grupo}/usuarios', tags=["Admin"], summary="Adicionar usuário ao grupo", description="Admin do grupo ou global pode adicionar usuário ao grupo.")
 async def adicionar_usuario_grupo(grupo: str, data: dict, user=Depends(get_current_user)):
     rbac = get_rbac_data()
-    if user["papel"] != "global_admin" and (grupo not in user["grupos"] or user["username"] not in rbac["grupos"][grupo]["admins"]):
+    if not is_group_admin_or_global(user, grupo, rbac):
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin do grupo ou global.")
     if grupo not in rbac["grupos"]:
         raise HTTPException(status_code=404, detail="Grupo não encontrado.")
-    novo_user = data.get("username")
-    if not novo_user or novo_user not in rbac["usuarios"]:
+    username = data.get("username")
+    if not username or username not in rbac["usuarios"]:
         raise HTTPException(status_code=400, detail="Usuário inválido.")
-    if novo_user not in rbac["grupos"][grupo]["users"]:
-        rbac["grupos"][grupo]["users"].append(novo_user)
-    if grupo not in rbac["usuarios"][novo_user]["grupos"]:
-        rbac["usuarios"][novo_user]["grupos"].append(grupo)
-    from pathlib import Path
+    if username in rbac["grupos"][grupo]["users"]:
+        return {"message": f"Usuário '{username}' já está no grupo '{grupo}'"}
+    rbac["grupos"][grupo]["users"].append(username)
+    if grupo not in rbac["usuarios"][username]["grupos"]:
+        rbac["usuarios"][username]["grupos"].append(grupo)
+    if "members" in rbac["grupos"][grupo]:
+        if username not in rbac["grupos"][grupo]["members"]:
+            rbac["grupos"][grupo]["members"].append(username)
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
-    logger.info(f"Usuário '{novo_user}' adicionado ao grupo '{grupo}' por {user['username']}")
-    return {"message": f"Usuário '{novo_user}' adicionado ao grupo '{grupo}'"}
+    logger.info(f"Usuário '{username}' adicionado ao grupo '{grupo}' por {user['username']}")
+    return {"message": f"Usuário '{username}' adicionado ao grupo '{grupo}'"}
 
 # RF03: Remover usuário do grupo (admin do grupo ou global)
 @router.delete('/grupos/{grupo}/usuarios/{username}', tags=["Admin"], summary="Remover usuário do grupo", description="Admin do grupo ou global pode remover usuário do grupo.")
 async def remover_usuario_grupo(grupo: str, username: str, user=Depends(get_current_user)):
     rbac = get_rbac_data()
-    if user["papel"] != "global_admin" and (grupo not in user["grupos"] or user["username"] not in rbac["grupos"][grupo]["admins"]):
+    if not is_group_admin_or_global(user, grupo, rbac):
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin do grupo ou global.")
     if grupo not in rbac["grupos"]:
         raise HTTPException(status_code=404, detail="Grupo não encontrado.")
     if username not in rbac["grupos"][grupo]["users"]:
         raise HTTPException(status_code=404, detail="Usuário não está no grupo.")
+    # Remove usuário do grupo
     rbac["grupos"][grupo]["users"].remove(username)
     if grupo in rbac["usuarios"][username]["grupos"]:
         rbac["usuarios"][username]["grupos"].remove(grupo)
+    # Se for admin do grupo, remove também
+    if username in rbac["grupos"][grupo]["admins"]:
+        rbac["grupos"][grupo]["admins"].remove(username)
+    # Se não restarem grupos, papel volta a 'user'
     if not rbac["usuarios"][username]["grupos"]:
         rbac["usuarios"][username]["papel"] = "user"
-    from pathlib import Path
+        rbac["usuarios"][username]["admin_de_grupos"] = []
+    else:
+        # Remove grupo de admin_de_grupos se necessário
+        if "admin_de_grupos" in rbac["usuarios"][username] and grupo in rbac["usuarios"][username]["admin_de_grupos"]:
+            rbac["usuarios"][username]["admin_de_grupos"].remove(grupo)
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     logger.info(f"Usuário '{username}' removido do grupo '{grupo}' por {user['username']}")
@@ -361,38 +369,40 @@ async def remover_usuario_grupo(grupo: str, username: str, user=Depends(get_curr
 @router.post('/grupos/{grupo}/promover-admin', tags=["Admin"], summary="Promover usuário a admin do grupo", description="Admin do grupo ou global pode promover usuário a admin do grupo.")
 async def promover_admin_grupo(grupo: str, data: dict, user=Depends(get_current_user)):
     rbac = get_rbac_data()
-    if user["papel"] != "global_admin" and (grupo not in user["grupos"] or user["username"] not in rbac["grupos"][grupo]["admins"]):
+    if user["papel"] != "global_admin" and (grupo not in user.get("grupos", []) or user["username"] not in rbac["grupos"][grupo]["admins"]):
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin do grupo ou global.")
     if grupo not in rbac["grupos"]:
         raise HTTPException(status_code=404, detail="Grupo não encontrado.")
     novo_admin = data.get("username")
     if not novo_admin or novo_admin not in rbac["usuarios"]:
         raise HTTPException(status_code=400, detail="Usuário inválido.")
+    if novo_admin not in rbac["grupos"][grupo]["users"]:
+        raise HTTPException(status_code=400, detail=f"Usuário '{novo_admin}' não é membro do grupo '{grupo}'. Não pode ser promovido.")
     if novo_admin not in rbac["grupos"][grupo]["admins"]:
         rbac["grupos"][grupo]["admins"].append(novo_admin)
     if grupo not in rbac["usuarios"][novo_admin]["grupos"]:
         rbac["usuarios"][novo_admin]["grupos"].append(grupo)
     rbac["usuarios"][novo_admin]["papel"] = "admin"
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     logger.info(f"Usuário '{novo_admin}' promovido a admin do grupo '{grupo}' por {user['username']}")
     return {"message": f"Usuário '{novo_admin}' agora é admin do grupo '{grupo}'"}
 
 # Exemplo de rota para listar usuários de um grupo (admin do grupo ou global)
-@router.get('/grupos/{grupo}/usuarios', tags=["Admin"], summary="Listar usuários do grupo", description="Lista usuários de um grupo. Admin do grupo ou global.")
+@router.get('/grupos/{grupo}/usuarios', tags=["Admin"], summary="Listar usuários do grupo", description="Lista administradores e usuários de um grupo.")
 async def listar_usuarios_grupo(grupo: str, user=Depends(get_current_user)):
     rbac = get_rbac_data()
-    if user["papel"] != "global_admin" and grupo not in user["grupos"]:
-        raise HTTPException(status_code=403, detail="Acesso restrito ao admin do grupo ou global.")
     if grupo not in rbac["grupos"]:
         raise HTTPException(status_code=404, detail="Grupo não encontrado.")
-    return {
-        "admins": rbac["grupos"][grupo]["admins"],
-        "users": rbac["grupos"][grupo]["users"]
-    }
+    if user["papel"] == "global_admin" or (grupo in user.get("grupos", []) and (user["username"] in rbac["grupos"][grupo]["admins"] or user["username"] in rbac["grupos"][grupo]["users"])):
+        return {
+            "admins": rbac["grupos"][grupo]["admins"],
+            "users": rbac["grupos"][grupo]["users"]
+        }
+    raise HTTPException(status_code=403, detail="Acesso restrito. Você deve ser membro ou administrador do grupo, ou administrador global.")
 
 # Rota para criar ferramenta (apenas admin do grupo ou global)
 @router.post('/grupos/{grupo}/ferramentas', tags=["Admin"], summary="Adicionar ferramenta ao grupo", description="Admin do grupo ou global pode adicionar uma ferramenta existente ao grupo.")
@@ -415,9 +425,9 @@ async def adicionar_ferramenta_ao_grupo(grupo: str, data: dict, user=Depends(get
     
     rbac["grupos"][grupo].setdefault("ferramentas", []).append(nome_ferramenta)
     
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     logger.info(f"Ferramenta '{nome_ferramenta}' adicionada ao grupo '{grupo}' por {user['username']}")
@@ -437,9 +447,9 @@ async def remover_ferramenta_do_grupo(grupo: str, tool_id: str, user=Depends(get
 
     rbac["grupos"][grupo]["ferramentas"].remove(tool_id)
     
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     logger.info(f"Ferramenta '{tool_id}' removida do grupo '{grupo}' por {user['username']}")
@@ -474,50 +484,51 @@ async def criar_usuario(data: dict, user=Depends(get_current_user)):
     rbac = get_rbac_data()
     if user["papel"] != "global_admin":
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin global.")
-    
     username = data.get("username")
     password = data.get("password")
     papel = data.get("papel", "user")
     grupos = data.get("grupos", [])
+    # Validação de campos obrigatórios
     if not username or not password:
-        raise HTTPException(status_code=400, detail="Username e password são obrigatórios.")
-    
+        return JSONResponse(status_code=422, content={"detail": "username e password são obrigatórios."})
+    # Validação de papel
+    ALLOWED_ROLES = ["user", "admin", "global_admin"]
+    if papel not in ALLOWED_ROLES:
+        return JSONResponse(status_code=400, content={"detail": "Papel inválido."})
+    # Usuário já existe
     if username in rbac["usuarios"]:
-        raise HTTPException(status_code=409, detail="Usuário já existe.")
-    
-    if papel not in ["user", "admin", "global_admin"]:
-        raise HTTPException(status_code=400, detail="Papel inválido. Deve ser 'user', 'admin' ou 'global_admin'.")
-    
+        return JSONResponse(status_code=409, content={"detail": "Usuário já existe."})
+    # Validação de grupos
     for grupo in grupos:
         if grupo not in rbac["grupos"]:
-            raise HTTPException(status_code=400, detail=f"Grupo '{grupo}' não existe.")
-    
-    senha_valida, resultado = validate_and_hash_password(password)
-    if not senha_valida:
-        if isinstance(resultado, list):
-            raise HTTPException(status_code=400, detail={
-                "message": "A senha não atende aos requisitos de segurança",
-                "errors": resultado
-            })
-        else:
-            raise HTTPException(status_code=400, detail=resultado)
-    
-    hashed_password = resultado
-    
+            return JSONResponse(status_code=400, content={"detail": f"Grupo '{grupo}' não encontrado."})
+    # Criação do usuário
+    from app.utils.password import hash_password
+    senha_hash = hash_password(password)
     rbac["usuarios"][username] = {
-        "senha": hashed_password,
+        "senha": senha_hash,
         "grupos": grupos,
         "papel": papel
     }
-    
-    from pathlib import Path
+    for grupo in grupos:
+        if "users" not in rbac["grupos"][grupo]:
+            rbac["grupos"][grupo]["users"] = []
+        if username not in rbac["grupos"][grupo]["users"]:
+            rbac["grupos"][grupo]["users"].append(username)
+        if "members" in rbac["grupos"][grupo]:
+            if username not in rbac["grupos"][grupo]["members"]:
+                rbac["grupos"][grupo]["members"].append(username)
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
-    
     logger.info(f"Usuário '{username}' criado por {user['username']}")
-    return {"message": f"Usuário '{username}' criado com sucesso."}
+    return JSONResponse(status_code=201, content={
+        "username": username,
+        "papel": papel,
+        "grupos": grupos
+    })
 
 # Endpoint para alterar senha do usuário
 @router.post('/usuarios/alterar-senha', tags=["User"], summary="Alterar senha", description="Permite ao usuário alterar sua própria senha.")
@@ -562,9 +573,9 @@ async def alterar_senha(data: dict, user=Depends(get_current_user)):
     
     rbac["usuarios"][username]["senha"] = hashed_password
     
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     
@@ -572,19 +583,19 @@ async def alterar_senha(data: dict, user=Depends(get_current_user)):
     return {"message": "Senha alterada com sucesso"}
 
 # Endpoint para listar todos os usuários (apenas admin global)
-@router.get("/usuarios", response_model=List[UserDetailResponse], tags=["Admin"], summary="Listar todos os usuários", description="Admin global pode listar todos os usuários.")
+@router.get("/usuarios", tags=["Admin"], summary="Listar todos os usuários", description="Admin global pode listar todos os usuários.")
 async def listar_usuarios(user=Depends(get_current_user)):
     if user["papel"] != "global_admin":
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin global.")
-    
     rbac = get_rbac_data()
     user_list = []
     for username, details in rbac.get("usuarios", {}).items():
-        user_list.append(UserDetailResponse(
-            username=username,
-            papel=details.get("papel", "user"),
-            grupos=details.get("grupos", [])
-        ))
+        user_list.append({
+            "username": username,
+            "papel": details.get("papel", "user"),
+            "grupos": details.get("grupos", []),
+            "admin_de_grupos": details.get("admin_de_grupos", []),
+        })
     return user_list
 
 # Endpoint para obter detalhes de um usuário específico (apenas admin global)
@@ -653,9 +664,9 @@ async def atualizar_usuario(username_param: str, data: UserUpdateRequest, curren
         updated = True
 
     if updated:
-        from pathlib import Path
+        from app.config import settings
         import json
-        rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+        rbac_path = settings.RBAC_FILE
         with open(rbac_path, 'w', encoding='utf-8') as f:
             json.dump(rbac, f, indent=2, ensure_ascii=False)
         logger.info(f"Usuário '{username_param}' atualizado por {current_user_identity['username']}.")
@@ -687,9 +698,9 @@ async def deletar_usuario(username_param: str, current_user_identity=Depends(get
 
     del rbac["usuarios"][username_param]
 
-    from pathlib import Path
+    from app.config import settings
     import json
-    rbac_path = Path(__file__).parent.parent.parent / 'data' / 'rbac.json'
+    rbac_path = settings.RBAC_FILE
     with open(rbac_path, 'w', encoding='utf-8') as f:
         json.dump(rbac, f, indent=2, ensure_ascii=False)
     

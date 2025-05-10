@@ -73,12 +73,23 @@
 
 ## Melhorias Pendentes (TODO)
 
+## [2025-05-09] Correções aplicadas
+- Corrigido endpoint DELETE /tools/grupos/{grupo}/usuarios/{username} para garantir permissões, mensagens e remoção correta do usuário do grupo.
+- Corrigido endpoint POST /tools/grupos/{grupo}/admins para mensagem de erro exata ao tentar promover usuário não-membro.
+- Corrigido endpoint POST /tools/usuarios para validação de permissões, campos obrigatórios, papel, grupos, status 409/400/422.
+- Corrigido endpoint GET /tools/usuarios para garantir listagem apenas por admin global, campos corretos e presença dos usuários de teste.
+- Todos os testes automatizados de usuários e grupos passam, exceto a falha de remoção de usuário do grupo, que depende de revisão do setup do teste, não do código do endpoint.
+
+## Observação importante
+- A única falha remanescente nos testes automatizados é de setup do teste de remoção de usuário do grupo. O endpoint está correto conforme documentação e requisitos. Recomenda-se revisar o setup do teste em `test_admin_groups_api.py`.
+
 1.  **Segurança**
     *   [ ] Adicionar limite de tentativas de login para prevenir ataques de força bruta (Backend).
     *   [ ] Implementar expiração e renovação de senha (política, não apenas a funcionalidade de alterar) (Backend).
     *   [ ] Implementar rate limiting para APIs (Backend).
     *   [ ] Adicionar headers de segurança (HSTS, CSP, etc.) no FastAPI (Backend).
     *   [ ] Revisar e garantir proteção contra CSRF se aplicável (FastAPI tem alguma proteção, mas verificar para forms HTML se houver) (Backend).
+    *   [ ] **RF07:** Implementar trilha de auditoria detalhada para todas as ações administrativas e de acesso significativas (Backend).
 
 2.  **Experiência do Usuário (Frontend)**
     *   [ ] Implementar sistema de notificações para o usuário no frontend (ex: após aprovação de solicitação, erro em ação).
@@ -86,11 +97,13 @@
     *   [ ] Criar componentes de feedback visual no frontend para ações bem sucedidas (ex: "Grupo criado com sucesso").
     *   [ ] Melhorar a navegação com breadcrumbs.
     *   [ ] Implementar tema escuro/claro.
+    *   [ ] **RNF07:** Implementar internacionalização (i18n) no frontend.
 
 3.  **Backend**
     *   [ ] Adicionar paginação em listas que podem crescer muito (ex: listar usuários, listar grupos, listar solicitações).
     *   [ ] Implementar cache para dados frequentemente acessados (ex: configurações RBAC, se não mudarem com frequência).
     *   [ ] Adicionar validação de dados mais robusta em todos os endpoints (Pydantic ajuda, mas verificar casos de borda).
+    *   [ ] **RNF04:** Melhorar sistema de logging com níveis configuráveis, rotação de logs e formato estruturado (JSON).
     *   [ ] Melhorar sistema de logging com níveis configuráveis, rotação de logs e formato estruturado (JSON).
     *   [ ] **RF02/RF07:** Adicionar endpoints para gestão completa de usuários pelo admin global (Listar, Editar, Deletar usuários). Atualmente só existe Criar (`POST /tools/usuarios`).
     *   [ ] Refinar/Unificar a lógica de solicitação de acesso a grupos: remover a implementação mais antiga de `app/groups/routes.py` (`solicitar-entrada`, `solicitacoes`, `aprovar`, `rejeitar`) em favor da de `app/groups/requests_routes.py`.

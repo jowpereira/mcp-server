@@ -4,6 +4,10 @@ import shutil
 import os
 import json
 from fastapi.testclient import TestClient
+import dotenv
+
+# Carregar .env.test explicitamente para garantir variáveis corretas nos testes
+dotenv.load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.test'), override=True)
 
 # Attempt to import the FastAPI app instance and other necessary components
 try:
@@ -103,7 +107,7 @@ def client():
 @pytest.fixture
 def auth_token_for_user(client: TestClient):
     def _get_token(username, password):
-        response = client.post("/tools/login", data={"username": username, "password": password})
+        response = client.post("/tools/login", json={"username": username, "password": password})
         if response.status_code == 200:
             return response.json()["access_token"]
         return None

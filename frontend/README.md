@@ -16,7 +16,7 @@ Este projeto é um portal de autoatendimento para o MCP Gateway, desenvolvido em
 - O backend FastAPI pode servir os arquivos estáticos de `/dist` para rodar tudo junto sem container extra
 
 ## Estrutura Recomendada
-- O frontend fica em `mcp-server-web/` e o backend em `mcp-server/`
+- O frontend fica em `frontend` e o backend em `mcp-server/`
 - Comunicação via REST (CORS liberado no backend para dev)
 
 ## Como rodar

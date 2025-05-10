@@ -22,12 +22,6 @@
         "admin_group_for_request"
       ],
       "ferramentas": []
-    },
-    "user_manage_group": {
-      "descricao": "Test group for user management",
-      "admins": [],
-      "users": [],
-      "ferramentas": []
     }
   },
   "usuarios": {

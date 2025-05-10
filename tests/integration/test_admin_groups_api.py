@@ -267,12 +267,11 @@ def test_add_user_to_group_global_admin(client: TestClient, auth_token_for_user,
 def test_add_user_to_group_group_admin(client: TestClient, auth_token_for_user, setup_group_for_user_management):
     group_name, user_to_add, headers_ga = setup_group_for_user_management
     
-    # Make 'admin_group1' an admin of this new group first
+    # Adiciona 'admin_group1' como membro antes de promover a admin
+    client.post(f"/tools/grupos/{group_name}/usuarios", headers=headers_ga, json={"username": "admin_group1"})
     client.post(f"/tools/grupos/{group_name}/admins", headers=headers_ga, json={"username": "admin_group1"})
-    
     group_admin_token = auth_token_for_user("admin_group1", "password_admin_g1")
     headers_group_admin = {"Authorization": f"Bearer {group_admin_token}"}
-    
     response = client.post(f"/tools/grupos/{group_name}/usuarios", headers=headers_group_admin, json={"username": user_to_add})
     assert response.status_code == 200, response.text
     assert response.json() == {"message": f"Usuário '{user_to_add}' adicionado ao grupo '{group_name}'"}
@@ -327,12 +326,12 @@ def test_remove_user_from_group_global_admin(client: TestClient, auth_token_for_
 
 def test_remove_user_from_group_group_admin(client: TestClient, auth_token_for_user, setup_group_for_user_management):
     group_name, user_to_manage, headers_ga = setup_group_for_user_management
-    client.post(f"/tools/grupos/{group_name}/usuarios", headers=headers_ga, json={"username": user_to_manage}) # Add user
-    client.post(f"/tools/grupos/{group_name}/admins", headers=headers_ga, json={"username": "admin_group1"}) # Make admin_group1 admin of this group
-
+    
+    # Adiciona 'admin_group1' como membro antes de promover a admin
+    client.post(f"/tools/grupos/{group_name}/usuarios", headers=headers_ga, json={"username": "admin_group1"})
+    client.post(f"/tools/grupos/{group_name}/admins", headers=headers_ga, json={"username": "admin_group1"})
     group_admin_token = auth_token_for_user("admin_group1", "password_admin_g1")
     headers_group_admin = {"Authorization": f"Bearer {group_admin_token}"}
-
     response = client.delete(f"/tools/grupos/{group_name}/usuarios/{user_to_manage}", headers=headers_group_admin)
     assert response.status_code == 200, response.text
 

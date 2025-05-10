@@ -2,15 +2,13 @@ import pytest
 import json
 from fastapi.testclient import TestClient
 from app.main import app  # Assuming your FastAPI app instance is here
-from app.auth import create_access_token # For direct token creation if needed, though fixture is preferred
-from app.utils.rbac_manager import RBACManager
 from app.config import settings
 
 # TestClient instance is typically handled by a fixture in conftest.py
 # from ..conftest import client, auth_token_for_user, manage_test_data_files
 
 # For these tests, we assume the following users exist in test_rbac_master.json:
-# - "admin_global" (role: "global_admin")
+# - "globaladmin" (role: "global_admin")
 # - "user_comum" (role: "user")
 # - "admin_grupo_A" (role: "admin", admin_of_groups: ["grupo_A"])
 
@@ -28,7 +26,7 @@ def test_create_user_success_global_admin(client: TestClient, auth_token_for_use
     """
     Testa a criação bem-sucedida de um novo usuário por um admin global.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         "username": "novo_usuario_teste",
@@ -45,21 +43,21 @@ def test_create_user_success_global_admin(client: TestClient, auth_token_for_use
 
     # Verifica se o usuário foi adicionado ao rbac.json
     rbac_data = load_rbac_data()
-    assert "novo_usuario_teste" in rbac_data["users"]
-    assert rbac_data["users"]["novo_usuario_teste"]["papel"] == "user"
+    assert "novo_usuario_teste" in rbac_data["usuarios"]
+    assert rbac_data["usuarios"]["novo_usuario_teste"]["papel"] == "user"
 
 def test_create_user_with_initial_groups_success(client: TestClient, auth_token_for_user, manage_test_data_files):
     """
     Testa a criação bem-sucedida de um novo usuário com grupos iniciais por um admin global.
     Assume que 'grupo_existente' foi criado previamente ou existe no master_rbac.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
 
     # Ensure 'grupo_existente' exists for the test
     rbac_data = load_rbac_data()
-    if "grupo_existente" not in rbac_data["groups"]:
-        rbac_data["groups"]["grupo_existente"] = {
+    if "grupo_existente" not in rbac_data["grupos"]:
+        rbac_data["grupos"]["grupo_existente"] = {
             "description": "Grupo para teste de criação de usuário",
             "admins": [],
             "members": [],
@@ -81,17 +79,17 @@ def test_create_user_with_initial_groups_success(client: TestClient, auth_token_
     assert created_user["grupos"] == ["grupo_existente"]
 
     rbac_data_after = load_rbac_data()
-    assert "usuario_com_grupo" in rbac_data_after["users"]
-    assert rbac_data_after["users"]["usuario_com_grupo"]["papel"] == "user"
-    assert "grupo_existente" in rbac_data_after["users"]["usuario_com_grupo"]["grupos"]
-    assert "usuario_com_grupo" in rbac_data_after["groups"]["grupo_existente"]["members"]
+    assert "usuario_com_grupo" in rbac_data_after["usuarios"]
+    assert rbac_data_after["usuarios"]["usuario_com_grupo"]["papel"] == "user"
+    assert "grupo_existente" in rbac_data_after["usuarios"]["usuario_com_grupo"]["grupos"]
+    assert "usuario_com_grupo" in rbac_data_after["grupos"]["grupo_existente"]["members"]
 
 
 def test_create_user_username_already_exists(client: TestClient, auth_token_for_user, manage_test_data_files):
     """
     Testa a tentativa de criar um usuário com um username que já existe.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     existing_user_data = { # Assume 'user_comum' exists from master data
         "username": "user_comum",
@@ -107,7 +105,7 @@ def test_create_user_invalid_role(client: TestClient, auth_token_for_user, manag
     """
     Testa a tentativa de criar um usuário com um papel inválido.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         "username": "usuario_papel_invalido",
@@ -125,7 +123,7 @@ def test_create_user_non_global_admin_forbidden(client: TestClient, auth_token_f
     """
     Testa a tentativa de criar um usuário por um usuário que não é admin global (ex: user comum).
     """
-    token = auth_token_for_user("user_comum", client) # user_comum is not a global admin
+    token = auth_token_for_user("user_comum", "password_user")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         "username": "outro_usuario_teste",
@@ -140,7 +138,7 @@ def test_create_user_admin_grupo_forbidden(client: TestClient, auth_token_for_us
     """
     Testa a tentativa de criar um usuário por um admin de grupo (que não é admin global).
     """
-    token = auth_token_for_user("admin_grupo_A", client) # admin_grupo_A is not a global admin
+    token = auth_token_for_user("admin_grupo_A", "password_admin_grupo_A")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         "username": "mais_um_usuario_teste",
@@ -155,7 +153,7 @@ def test_create_user_missing_username(client: TestClient, auth_token_for_user, m
     """
     Testa a tentativa de criar um usuário sem o campo username.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         # "username": "usuario_sem_nome",
@@ -170,7 +168,7 @@ def test_create_user_missing_password(client: TestClient, auth_token_for_user, m
     """
     Testa a tentativa de criar um usuário sem o campo password.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         "username": "usuario_sem_senha",
@@ -185,7 +183,7 @@ def test_create_user_missing_role(client: TestClient, auth_token_for_user, manag
     """
     Testa a tentativa de criar um usuário sem o campo papel.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         "username": "usuario_sem_papel",
@@ -200,7 +198,7 @@ def test_create_user_non_existent_group(client: TestClient, auth_token_for_user,
     """
     Testa a criação de um usuário com um grupo inicial que não existe.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     new_user_data = {
         "username": "usuario_com_grupo_inexistente",
@@ -219,18 +217,18 @@ def test_list_users_success_global_admin(client: TestClient, auth_token_for_user
     """
     Testa a listagem bem-sucedida de usuários por um admin global.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/tools/usuarios", headers=headers)
     assert response.status_code == 200
     users_list = response.json()
     assert isinstance(users_list, list)
     # Verifica se pelo menos os usuários do master data estão presentes
-    # (admin_global, user_comum, admin_grupo_A, user_sem_grupo)
+    # (globaladmin, user_comum, admin_grupo_A, user_sem_grupo)
     # O número exato pode variar dependendo de outros testes que adicionam usuários
     assert len(users_list) >= 4 
     usernames_in_response = [user["username"] for user in users_list]
-    assert "admin_global" in usernames_in_response
+    assert "globaladmin" in usernames_in_response
     assert "user_comum" in usernames_in_response
     for user in users_list:
         assert "username" in user
@@ -244,7 +242,7 @@ def test_list_users_forbidden_group_admin(client: TestClient, auth_token_for_use
     """
     Testa que um admin de grupo (não global) não pode listar todos os usuários.
     """
-    token = auth_token_for_user("admin_grupo_A", client)
+    token = auth_token_for_user("admin_grupo_A", "password_admin_grupo_A")
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/tools/usuarios", headers=headers)
     assert response.status_code == 403 # Forbidden
@@ -253,7 +251,7 @@ def test_list_users_forbidden_regular_user(client: TestClient, auth_token_for_us
     """
     Testa que um usuário comum não pode listar todos os usuários.
     """
-    token = auth_token_for_user("user_comum", client)
+    token = auth_token_for_user("user_comum", "password_user")
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/tools/usuarios", headers=headers)
     assert response.status_code == 403 # Forbidden
@@ -271,7 +269,7 @@ def test_get_user_details_success_global_admin(client: TestClient, auth_token_fo
     """
     Testa a obtenção bem-sucedida dos detalhes de um usuário por um admin global.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum" # Usuário existente do master data
     response = client.get(f"/tools/usuarios/{target_username}", headers=headers)
@@ -281,10 +279,12 @@ def test_get_user_details_success_global_admin(client: TestClient, auth_token_fo
     assert user_details["papel"] == "user"
     assert "hashed_password" not in user_details
     assert "password" not in user_details
-    # Verifica se os grupos e admin_de_grupos estão corretos conforme test_rbac_master.json
-    rbac_master_data = manage_test_data_files # Carrega os dados mestre
-    expected_groups = rbac_master_data["users"][target_username].get("grupos", [])
-    expected_admin_groups = rbac_master_data["users"][target_username].get("admin_de_grupos", [])
+    # Verifica se os grupos e admin_de_grupos estão corretos conforme test_rbac.json (working copy)
+    rbac_current_data = load_rbac_data()
+    assert target_username in rbac_current_data["usuarios"], f"Usuário {target_username} não encontrado nos dados RBAC de teste."
+    
+    expected_groups = rbac_current_data["usuarios"][target_username].get("grupos", [])
+    expected_admin_groups = rbac_current_data["usuarios"][target_username].get("admin_de_grupos", [])
     assert sorted(user_details["grupos"]) == sorted(expected_groups)
     assert sorted(user_details["admin_de_grupos"]) == sorted(expected_admin_groups)
 
@@ -293,7 +293,7 @@ def test_get_user_details_self_success(client: TestClient, auth_token_for_user, 
     Testa se um usuário pode obter seus próprios detalhes.
     """
     target_username = "user_comum"
-    token = auth_token_for_user(target_username, client)
+    token = auth_token_for_user(target_username, "password_user")
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get(f"/tools/usuarios/{target_username}", headers=headers)
     assert response.status_code == 200
@@ -304,7 +304,7 @@ def test_get_user_details_forbidden_other_user(client: TestClient, auth_token_fo
     """
     Testa que um usuário comum não pode obter detalhes de outro usuário.
     """
-    token = auth_token_for_user("user_comum", client) # user_comum tentando ver admin_grupo_A
+    token = auth_token_for_user("user_comum", "password_user") # user_comum tentando ver admin_grupo_A
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "admin_grupo_A"
     response = client.get(f"/tools/usuarios/{target_username}", headers=headers)
@@ -314,7 +314,7 @@ def test_get_user_details_forbidden_group_admin_for_unrelated_user(client: TestC
     """
     Testa que um admin de grupo não pode obter detalhes de um usuário não relacionado ao seu grupo.
     """
-    token = auth_token_for_user("admin_grupo_A", client) # admin_grupo_A
+    token = auth_token_for_user("admin_grupo_A", "password_admin_grupo_A") # admin_grupo_A
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_sem_grupo" # user_sem_grupo não está no grupo_A
     response = client.get(f"/tools/usuarios/{target_username}", headers=headers)
@@ -324,7 +324,7 @@ def test_get_user_details_not_found(client: TestClient, auth_token_for_user, man
     """
     Testa a tentativa de obter detalhes de um usuário inexistente.
     """
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "usuario_que_nao_existe_999"
     response = client.get(f"/tools/usuarios/{target_username}", headers=headers)
@@ -343,7 +343,7 @@ def test_get_user_details_unauthenticated(client: TestClient, manage_test_data_f
 
 def test_update_user_role_success_global_admin(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA atualiza o papel de um usuário (user -> admin de grupo_A)."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum" # Existe no master data com papel "user"
 
@@ -359,23 +359,21 @@ def test_update_user_role_success_global_admin(client: TestClient, auth_token_fo
     assert updated_user["papel"] == "admin"
 
     rbac_data = load_rbac_data()
-    assert rbac_data["users"][target_username]["papel"] == "admin"
-    # Se o papel muda para admin, admin_de_grupos não deve ser automaticamente populado por este endpoint
-    # a menos que a lógica do endpoint especificamente faça isso. O UserUpdate não tem admin_de_grupos.
-    assert rbac_data["users"][target_username].get("admin_de_grupos", []) == []
+    assert rbac_data["usuarios"][target_username]["papel"] == "admin"
+    assert rbac_data["usuarios"][target_username].get("admin_de_grupos", []) == []
 
 def test_update_user_groups_success_global_admin(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA atualiza os grupos de um usuário."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_sem_grupo" # Existe no master data sem grupos
 
     # Garante que grupo_A e grupo_B existem
     rbac_data_initial = load_rbac_data()
-    if "grupo_A" not in rbac_data_initial["groups"]:
-        rbac_data_initial["groups"]["grupo_A"] = {"description": "Test Group A", "admins": [], "members": [], "tools": []}
-    if "grupo_B" not in rbac_data_initial["groups"]:
-        rbac_data_initial["groups"]["grupo_B"] = {"description": "Test Group B", "admins": [], "members": [], "tools": []}
+    if "grupo_A" not in rbac_data_initial["grupos"]:
+        rbac_data_initial["grupos"]["grupo_A"] = {"description": "Test Group A", "admins": [], "members": [], "tools": []}
+    if "grupo_B" not in rbac_data_initial["grupos"]:
+        rbac_data_initial["grupos"]["grupo_B"] = {"description": "Test Group B", "admins": [], "members": [], "tools": []}
     save_rbac_data(rbac_data_initial)
 
     update_data = {"grupos": ["grupo_A", "grupo_B"]}
@@ -386,14 +384,14 @@ def test_update_user_groups_success_global_admin(client: TestClient, auth_token_
     assert sorted(updated_user["grupos"]) == sorted(["grupo_A", "grupo_B"])
 
     rbac_data = load_rbac_data()
-    assert sorted(rbac_data["users"][target_username]["grupos"]) == sorted(["grupo_A", "grupo_B"])
-    assert target_username in rbac_data["groups"]["grupo_A"]["members"]
-    assert target_username in rbac_data["groups"]["grupo_B"]["members"]
+    assert sorted(rbac_data["usuarios"][target_username]["grupos"]) == sorted(["grupo_A", "grupo_B"])
+    assert target_username in rbac_data["grupos"]["grupo_A"]["members"]
+    assert target_username in rbac_data["grupos"]["grupo_B"]["members"]
 
     # Testa a remoção de um grupo e adição de outro
     update_data_2 = {"grupos": ["grupo_B", "grupo_C"]}
-    if "grupo_C" not in rbac_data["groups"]:
-        rbac_data["groups"]["grupo_C"] = {"description": "Test Group C", "admins": [], "members": [], "tools": []}
+    if "grupo_C" not in rbac_data["grupos"]:
+        rbac_data["grupos"]["grupo_C"] = {"description": "Test Group C", "admins": [], "members": [], "tools": []}
         save_rbac_data(rbac_data)
     
     response_2 = client.put(f"/tools/usuarios/{target_username}", headers=headers, json=update_data_2)
@@ -402,20 +400,20 @@ def test_update_user_groups_success_global_admin(client: TestClient, auth_token_
     assert sorted(updated_user_2["grupos"]) == sorted(["grupo_B", "grupo_C"])
 
     rbac_data_2 = load_rbac_data()
-    assert sorted(rbac_data_2["users"][target_username]["grupos"]) == sorted(["grupo_B", "grupo_C"])
-    assert target_username not in rbac_data_2["groups"]["grupo_A"]["members"]
-    assert target_username in rbac_data_2["groups"]["grupo_B"]["members"]
-    assert target_username in rbac_data_2["groups"]["grupo_C"]["members"]
+    assert sorted(rbac_data_2["usuarios"][target_username]["grupos"]) == sorted(["grupo_B", "grupo_C"])
+    assert target_username not in rbac_data_2["grupos"]["grupo_A"]["members"]
+    assert target_username in rbac_data_2["grupos"]["grupo_B"]["members"]
+    assert target_username in rbac_data_2["grupos"]["grupo_C"]["members"]
 
 def test_update_user_role_and_groups_success_global_admin(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA atualiza o papel e os grupos de um usuário."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum" # Papel "user", grupos ["grupo_A"] no master
 
     rbac_data_initial = load_rbac_data()
-    if "grupo_B" not in rbac_data_initial["groups"]:
-        rbac_data_initial["groups"]["grupo_B"] = {"description": "Test Group B", "admins": [], "members": [], "tools": []}
+    if "grupo_B" not in rbac_data_initial["grupos"]:
+        rbac_data_initial["grupos"]["grupo_B"] = {"description": "Test Group B", "admins": [], "members": [], "tools": []}
         save_rbac_data(rbac_data_initial)
 
     update_data = {"papel": "admin", "grupos": ["grupo_B"]}
@@ -426,14 +424,14 @@ def test_update_user_role_and_groups_success_global_admin(client: TestClient, au
     assert updated_user["grupos"] == ["grupo_B"]
 
     rbac_data = load_rbac_data()
-    assert rbac_data["users"][target_username]["papel"] == "admin"
-    assert rbac_data["users"][target_username]["grupos"] == ["grupo_B"]
-    assert target_username not in rbac_data["groups"]["grupo_A"]["members"] # Assumindo que user_comum estava em grupo_A
-    assert target_username in rbac_data["groups"]["grupo_B"]["members"]
+    assert rbac_data["usuarios"][target_username]["papel"] == "admin"
+    assert rbac_data["usuarios"][target_username]["grupos"] == ["grupo_B"]
+    assert target_username not in rbac_data["grupos"]["grupo_A"]["members"] # Assumindo que user_comum estava em grupo_A
+    assert target_username in rbac_data["grupos"]["grupo_B"]["members"]
 
 def test_update_user_to_global_admin_success(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA promove um usuário para global_admin."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum"
 
@@ -444,11 +442,11 @@ def test_update_user_to_global_admin_success(client: TestClient, auth_token_for_
     assert updated_user["papel"] == "global_admin"
 
     rbac_data = load_rbac_data()
-    assert rbac_data["users"][target_username]["papel"] == "global_admin"
+    assert rbac_data["usuarios"][target_username]["papel"] == "global_admin"
 
 def test_update_user_clear_admin_privileges_on_role_change(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA muda o papel de um admin de grupo para 'user', limpando admin_de_grupos."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "admin_grupo_A" # Master: papel "admin", admin_de_grupos ["grupo_A"]
 
@@ -460,13 +458,13 @@ def test_update_user_clear_admin_privileges_on_role_change(client: TestClient, a
     assert updated_user["admin_de_grupos"] == []
 
     rbac_data = load_rbac_data()
-    assert rbac_data["users"][target_username]["papel"] == "user"
-    assert rbac_data["users"][target_username].get("admin_de_grupos", []) == []
-    assert target_username not in rbac_data["groups"]["grupo_A"]["admins"]
+    assert rbac_data["usuarios"][target_username]["papel"] == "user"
+    assert rbac_data["usuarios"][target_username].get("admin_de_grupos", []) == []
+    assert target_username not in rbac_data["grupos"]["grupo_A"]["admins"]
 
 def test_update_user_remove_all_groups_success(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA remove todos os grupos de um usuário que pertence a grupos."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum" # Pertence a ["grupo_A"] no master data
 
@@ -477,12 +475,12 @@ def test_update_user_remove_all_groups_success(client: TestClient, auth_token_fo
     assert updated_user["grupos"] == []
 
     rbac_data = load_rbac_data()
-    assert rbac_data["users"][target_username]["grupos"] == []
-    assert target_username not in rbac_data["groups"]["grupo_A"]["members"]
+    assert rbac_data["usuarios"][target_username]["grupos"] == []
+    assert target_username not in rbac_data["grupos"]["grupo_A"]["members"]
 
 def test_update_user_not_found(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA tenta atualizar um usuário inexistente."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     update_data = {"papel": "user"}
     response = client.put("/tools/usuarios/usuario_fantasma123", headers=headers, json=update_data)
@@ -491,7 +489,7 @@ def test_update_user_not_found(client: TestClient, auth_token_for_user, manage_t
 
 def test_update_user_invalid_role_value(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA tenta definir um valor de papel inválido."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum"
     update_data = {"papel": "role_que_nao_existe"}
@@ -500,7 +498,7 @@ def test_update_user_invalid_role_value(client: TestClient, auth_token_for_user,
 
 def test_update_user_non_existent_group(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA tenta adicionar um usuário a um grupo inexistente."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum"
     update_data = {"grupos": ["grupo_A", "grupo_fantasma123"]}
@@ -511,13 +509,13 @@ def test_update_user_non_existent_group(client: TestClient, auth_token_for_user,
 
 def test_update_user_empty_payload_no_change(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA envia um payload de atualização vazio; nenhum dado deve mudar."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum"
 
     # Carrega estado inicial para comparação
     rbac_before = load_rbac_data()
-    user_before = rbac_before["users"][target_username].copy()
+    user_before = rbac_before["usuarios"][target_username].copy()
 
     update_data = {} # Payload vazio
     response = client.put(f"/tools/usuarios/{target_username}", headers=headers, json=update_data)
@@ -525,7 +523,7 @@ def test_update_user_empty_payload_no_change(client: TestClient, auth_token_for_
     
     updated_user_response = response.json()
     rbac_after = load_rbac_data()
-    user_after = rbac_after["users"][target_username]
+    user_after = rbac_after["usuarios"][target_username]
 
     assert user_after["papel"] == user_before["papel"]
     assert sorted(user_after.get("grupos", [])) == sorted(user_before.get("grupos", []))
@@ -535,7 +533,7 @@ def test_update_user_empty_payload_no_change(client: TestClient, auth_token_for_
 
 def test_update_user_forbidden_regular_user(client: TestClient, auth_token_for_user, manage_test_data_files):
     """Usuário regular não pode atualizar outros usuários."""
-    token = auth_token_for_user("user_comum", client)
+    token = auth_token_for_user("user_comum", "password_user")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "admin_grupo_A"
     update_data = {"papel": "user"}
@@ -545,7 +543,7 @@ def test_update_user_forbidden_regular_user(client: TestClient, auth_token_for_u
 def test_update_user_forbidden_self_regular_user(client: TestClient, auth_token_for_user, manage_test_data_files):
     """Usuário regular não pode atualizar seu próprio papel ou grupos por este endpoint."""
     target_username = "user_comum"
-    token = auth_token_for_user(target_username, client)
+    token = auth_token_for_user(target_username, "password_user")
     headers = {"Authorization": f"Bearer {token}"}
     update_data = {"papel": "admin"} # Tentando se auto-promover
     response = client.put(f"/tools/usuarios/{target_username}", headers=headers, json=update_data)
@@ -562,22 +560,22 @@ def test_update_user_unauthenticated(client: TestClient, manage_test_data_files)
 
 def test_delete_user_success_global_admin(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA remove um usuário com sucesso."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     
     # Cria um usuário para deletar para não afetar os usuários base dos testes
     rbac_data = load_rbac_data()
     user_to_delete = "usuario_para_deletar"
-    if user_to_delete not in rbac_data["users"]:
-        rbac_data["users"][user_to_delete] = {
+    if user_to_delete not in rbac_data["usuarios"]:
+        rbac_data["usuarios"][user_to_delete] = {
             "hashed_password": "some_hash", 
             "papel": "user", 
             "grupos": ["grupo_A"],
             "admin_de_grupos": []
         }
         # Adiciona ao grupo_A também
-        if "grupo_A" in rbac_data["groups"] and user_to_delete not in rbac_data["groups"]["grupo_A"]["members"]:
-             rbac_data["groups"]["grupo_A"]["members"].append(user_to_delete)
+        if "grupo_A" in rbac_data["grupos"] and user_to_delete not in rbac_data["grupos"]["grupo_A"]["members"]:
+             rbac_data["grupos"]["grupo_A"]["members"].append(user_to_delete)
         save_rbac_data(rbac_data)
 
     response = client.delete(f"/tools/usuarios/{user_to_delete}", headers=headers)
@@ -585,14 +583,14 @@ def test_delete_user_success_global_admin(client: TestClient, auth_token_for_use
     assert response.json()["detail"] == "Usuário removido com sucesso."
 
     rbac_data_after = load_rbac_data()
-    assert user_to_delete not in rbac_data_after["users"]
+    assert user_to_delete not in rbac_data_after["usuarios"]
     # Verifica se foi removido dos membros do grupo
-    if "grupo_A" in rbac_data_after["groups"]:
-        assert user_to_delete not in rbac_data_after["groups"]["grupo_A"]["members"]
+    if "grupo_A" in rbac_data_after["grupos"]:
+        assert user_to_delete not in rbac_data_after["grupos"]["grupo_A"]["members"]
 
 def test_delete_admin_user_removes_from_group_admin_list(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA remove um usuário que é admin de um grupo, verificando se é removido da lista de admins do grupo."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
 
     # Cria um usuário admin de grupo para deletar
@@ -600,28 +598,28 @@ def test_delete_admin_user_removes_from_group_admin_list(client: TestClient, aut
     admin_user_to_delete = "admin_temp_para_deletar"
     group_he_admins = "grupo_X_temp"
 
-    if group_he_admins not in rbac_data["groups"]:
-        rbac_data["groups"][group_he_admins] = {"description": "Temp group", "admins": [], "members": [], "tools": []}
+    if group_he_admins not in rbac_data["grupos"]:
+        rbac_data["grupos"][group_he_admins] = {"description": "Temp group", "admins": [], "members": [], "tools": []}
     
-    rbac_data["users"][admin_user_to_delete] = {
+    rbac_data["usuarios"][admin_user_to_delete] = {
         "hashed_password": "some_hash", 
         "papel": "admin", 
         "grupos": [],
         "admin_de_grupos": [group_he_admins]
     }
-    rbac_data["groups"][group_he_admins]["admins"].append(admin_user_to_delete)
+    rbac_data["grupos"][group_he_admins]["admins"].append(admin_user_to_delete)
     save_rbac_data(rbac_data)
 
     response = client.delete(f"/tools/usuarios/{admin_user_to_delete}", headers=headers)
     assert response.status_code == 200
 
     rbac_data_after = load_rbac_data()
-    assert admin_user_to_delete not in rbac_data_after["users"]
-    assert admin_user_to_delete not in rbac_data_after["groups"][group_he_admins]["admins"]
+    assert admin_user_to_delete not in rbac_data_after["usuarios"]
+    assert admin_user_to_delete not in rbac_data_after["grupos"][group_he_admins]["admins"]
 
 def test_delete_user_not_found(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA tenta remover um usuário inexistente."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
     response = client.delete("/tools/usuarios/usuario_fantasma_para_deletar", headers=headers)
     assert response.status_code == 404
@@ -629,15 +627,15 @@ def test_delete_user_not_found(client: TestClient, auth_token_for_user, manage_t
 
 def test_delete_self_global_admin_forbidden(client: TestClient, auth_token_for_user, manage_test_data_files):
     """GA tenta se auto-remover (deve ser proibido)."""
-    token = auth_token_for_user("admin_global", client)
+    token = auth_token_for_user("globaladmin", "password_global")
     headers = {"Authorization": f"Bearer {token}"}
-    response = client.delete("/tools/usuarios/admin_global", headers=headers)
+    response = client.delete("/tools/usuarios/globaladmin", headers=headers)
     assert response.status_code == 400 # Ou 403, dependendo da implementação específica
     assert "não pode remover a si mesmo" in response.json()["detail"].lower() or "cannot remove yourself" in response.json()["detail"].lower()
 
 def test_delete_user_forbidden_regular_user(client: TestClient, auth_token_for_user, manage_test_data_files):
     """Usuário regular tenta remover outro usuário."""
-    token = auth_token_for_user("user_comum", client)
+    token = auth_token_for_user("user_comum", "password_user")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_sem_grupo" # Outro usuário existente
     response = client.delete(f"/tools/usuarios/{target_username}", headers=headers)
@@ -645,7 +643,7 @@ def test_delete_user_forbidden_regular_user(client: TestClient, auth_token_for_u
 
 def test_delete_user_forbidden_group_admin(client: TestClient, auth_token_for_user, manage_test_data_files):
     """Admin de grupo tenta remover outro usuário."""
-    token = auth_token_for_user("admin_grupo_A", client)
+    token = auth_token_for_user("admin_grupo_A", "password_admin_grupo_A")
     headers = {"Authorization": f"Bearer {token}"}
     target_username = "user_comum"
     response = client.delete(f"/tools/usuarios/{target_username}", headers=headers)
