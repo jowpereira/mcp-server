@@ -55,7 +55,7 @@ class UserUpdateRequest(BaseModel):
     ferramentas_disponiveis: List[ToolResponseSchema]
 
 # Rotas de autenticação e ferramentas
-@router.post('/login', tags=["Auth"], summary="Login de usuário", description="Autentica usuário e retorna JWT.")
+@router.post('/login', tags=["Auth"], summary="Login de usuário", description="Autentica usuário e retorna JWT.\n\n**Exemplo de request:**\n```json\n{\n  \"username\": \"usuario1\",\n  \"password\": \"senha123\"\n}\n```\n\n**Exemplo de resposta (200):**\n```json\n{\n  \"access_token\": \"<jwt>\",\n  \"token_type\": \"bearer\"\n}\n```\n\n**Códigos de resposta:**\n- 200: Sucesso\n- 400: Usuário e senha obrigatórios\n- 401: Usuário ou senha inválidos\n- 500: Erro interno\n")
 async def login(data: dict):
     username: Optional[str] = data.get("username")
     password: Optional[str] = data.get("password")
@@ -98,7 +98,7 @@ async def health():
     return {"status": "ok"}
 
 # Exemplo de rota para listar grupos (apenas admin global)
-@router.get('/grupos', tags=["Admin"], summary="Listar grupos", description="Lista todos os grupos com detalhes.")
+@router.get('/grupos', tags=["Admin"], summary="Listar grupos", description="Lista todos os grupos com detalhes.\n\n**Exemplo de resposta:**\n```json\n[\n  {\n    \"nome\": \"grupo1\",\n    \"descricao\": \"Grupo de exemplo\",\n    \"administradores\": [\"admin1\"],\n    \"usuarios\": [\"user1\", \"admin1\"],\n    \"ferramentas_disponiveis\": [\n      {\n        \"id\": \"tool_x\",\n        \"nome\": \"Ferramenta X\",\n        \"url_base\": \"/tools/ferramenta_x\",\n        \"descricao\": \"Ferramenta de Teste X\"\n      }\n    ]\n  }\n]\n```\n\n**Códigos de resposta:**\n- 200: Sucesso\n- 403: Acesso restrito ao admin global\n")
 async def listar_grupos(user=Depends(get_current_user)):
     rbac = get_rbac_data()
     if user["papel"] != "global_admin":
@@ -392,7 +392,7 @@ async def promover_admin_grupo(grupo: str, data: dict, user=Depends(get_current_
     return {"message": f"Usuário '{novo_admin}' agora é admin do grupo '{grupo}'"}
 
 # Exemplo de rota para listar usuários de um grupo (admin do grupo ou global)
-@router.get('/grupos/{grupo}/usuarios', tags=["Admin"], summary="Listar usuários do grupo", description="Lista administradores e usuários de um grupo.")
+@router.get('/grupos/{grupo}/usuarios', tags=["Admin"], summary="Listar usuários do grupo", description="Lista administradores e usuários de um grupo.\n\n**Exemplo de resposta:**\n```json\n{\n  \"admins\": [\"admin1\"],\n  \"users\": [\"user1\", \"admin1\"]\n}\n```\n\n**Códigos de resposta:**\n- 200: Sucesso\n- 403: Acesso restrito\n- 404: Grupo não encontrado\n")
 async def listar_usuarios_grupo(grupo: str, user=Depends(get_current_user)):
     rbac = get_rbac_data()
     if grupo not in rbac["grupos"]:
@@ -479,7 +479,7 @@ async def listar_ferramentas_globais(user=Depends(get_current_user)):
     return ferramentas_list
 
 # RF07: Criar usuário (admin global)
-@router.post('/usuarios', tags=["Admin"], summary="Criar usuário", description="Admin global pode criar um novo usuário.")
+@router.post('/usuarios', tags=["Admin"], summary="Criar usuário", description="Admin global pode criar um novo usuário.\n\n**Exemplo de request:**\n```json\n{\n  \"username\": \"novo_user\",\n  \"password\": \"SenhaForte123!\",\n  \"papel\": \"user\",\n  \"grupos\": [\"grupo1\"]\n}\n```\n\n**Exemplo de resposta (201):**\n```json\n{\n  \"username\": \"novo_user\",\n  \"papel\": \"user\",\n  \"grupos\": [\"grupo1\"]\n}\n```\n\n**Códigos de resposta:**\n- 201: Usuário criado\n- 400: Papel inválido ou grupo inexistente\n- 403: Acesso restrito ao admin global\n- 409: Usuário já existe\n- 422: username e password são obrigatórios\n")
 async def criar_usuario(data: dict, user=Depends(get_current_user)):
     rbac = get_rbac_data()
     if user["papel"] != "global_admin":
@@ -583,7 +583,7 @@ async def alterar_senha(data: dict, user=Depends(get_current_user)):
     return {"message": "Senha alterada com sucesso"}
 
 # Endpoint para listar todos os usuários (apenas admin global)
-@router.get("/usuarios", tags=["Admin"], summary="Listar todos os usuários", description="Admin global pode listar todos os usuários.")
+@router.get("/usuarios", tags=["Admin"], summary="Listar todos os usuários", description="Admin global pode listar todos os usuários.\n\n**Exemplo de resposta:**\n```json\n[\n  {\n    \"username\": \"user1\",\n    \"papel\": \"user\",\n    \"grupos\": [\"grupo1\"],\n    \"admin_de_grupos\": []\n  }\n]\n```\n\n**Códigos de resposta:**\n- 200: Sucesso\n- 403: Acesso restrito ao admin global\n")
 async def listar_usuarios(user=Depends(get_current_user)):
     if user["papel"] != "global_admin":
         raise HTTPException(status_code=403, detail="Acesso restrito ao admin global.")

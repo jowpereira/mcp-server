@@ -2,41 +2,26 @@
   "grupos": {
     "group1": {
       "descricao": "Test Group 1",
-      "admins": [
-        "admin_group1"
-      ],
-      "users": [
-        "testuser1",
-        "admin_group1"
-      ],
-      "ferramentas": [
-        "tool_x"
-      ]
+      "admins": ["admin_group1"],
+      "users": ["testuser1", "admin_group1"],
+      "ferramentas": ["tool_x"]
     },
     "group_for_request": {
       "descricao": "Group for access requests",
-      "admins": [
-        "admin_group_for_request"
-      ],
-      "users": [
-        "admin_group_for_request"
-      ],
+      "admins": ["admin_group_for_request"],
+      "users": ["admin_group_for_request"],
       "ferramentas": []
     }
   },
   "usuarios": {
     "testuser1": {
       "senha": "$2b$12$vNigeVwdz9D/8x9YQm2RzeK42z9k5aGIDtutY1766N5eZx/ub3azO",
-      "grupos": [
-        "group1"
-      ],
+      "grupos": ["group1"],
       "papel": "user"
     },
     "admin_group1": {
       "senha": "$2b$12$Ezb.NwWPT3mBrp9wUwU1FuCgDCDQ.qQ/aXCGu49S2dqn4VihIIiJy",
-      "grupos": [
-        "group1"
-      ],
+      "grupos": ["group1"],
       "papel": "admin"
     },
     "globaladmin": {
@@ -56,9 +41,7 @@
     },
     "admin_group_for_request": {
       "senha": "$2b$12$Dg3tXO7RIeVmeI1V/0mWHe44Ifz5IqxSVtnP6bjPBrvPDmAVNkmJi",
-      "grupos": [
-        "group_for_request"
-      ],
+      "grupos": ["group_for_request"],
       "papel": "admin"
     }
   },

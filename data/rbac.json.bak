@@ -27,7 +27,7 @@
   },
   "usuarios": {
     "superadmin": {
-      "senha": "$2b$12$eOavf3mG3rEnGLNDBf4Pk.fTGP8DXHYzRSMgNQCq7ZOFZhGLfazEi",
+      "senha": "$2b$12$vInLQuDs8VrVTkV91Hn9eOFIOC5/WW8qhNp8p2rV3Ywko0uQAHP42",
       "grupos": [],
       "papel": "global_admin"
     },

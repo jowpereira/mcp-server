@@ -35,11 +35,21 @@ def test_create_group_success(client: TestClient, auth_token_for_user):
     assert rbac_data["grupos"]["new_group_1"]["ferramentas"] == []
 
 def test_create_group_already_exists(client: TestClient, auth_token_for_user):
+    # Obtém token para o globaladmin
     token = auth_token_for_user("globaladmin", "password_global")
+    # Garante que o token foi obtido com sucesso
+    assert token, "Falha ao obter token para o usuário globaladmin. Verifique se o usuário existe e a senha está correta."
+    
     headers = {"Authorization": f"Bearer {token}"}
     
-    # group1 already exists from master data
+    # Tenta criar um grupo com o nome 'group1' que já deve existir no arquivo test_rbac_fixed.json
     group_data = {"nome": "group1", "descricao": "Attempt to recreate"}
+    
+    # Imprime o conteúdo atual do RBAC para debug
+    print("Verificando conteúdo do RBAC antes do teste:")
+    rbac_data = load_rbac_data(WORKING_RBAC_FILE)
+    print(f"Grupos existentes: {list(rbac_data.get('grupos', {}).keys())}")
+    
     response = client.post("/tools/grupos", headers=headers, json=group_data)
     
     assert response.status_code == 409
