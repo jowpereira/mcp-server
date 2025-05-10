@@ -99,6 +99,8 @@ Veja `data/rbac.json` para exemplo de usuários, grupos e permissões.
 ## Documentação da API
 Acesse `/docs` para Swagger ou `/redoc` para Redoc.
 
+> **Nota:** A documentação técnica detalhada dos endpoints, modelos e fluxos do backend está agora em [`docs/API.md`](docs/API.md). O antigo `BACKEND_DOCUMENTATION.md` foi renomeado para padronização.
+
 ---
 
 ## Requisitos do Sistema
@@ -115,6 +117,7 @@ A documentação detalhada do projeto está centralizada na pasta [`docs/`](docs
 - [`docs/GOVERNANCA.md`](docs/GOVERNANCA.md): Governança e papéis
 - [`docs/OPERACIONAL.md`](docs/OPERACIONAL.md): Operação, monitoramento e troubleshooting
 - [`docs/CHANGELOG.md`](docs/CHANGELOG.md): Histórico de versões
+- [`docs/BACKEND_DOCUMENTATION`](docs/CHANGELOG.md): Documentação Backend
 
 ---
 
