@@ -124,10 +124,10 @@
     *   [ ] Adicionar validação de dados mais robusta em todos os endpoints (Pydantic ajuda, mas verificar casos de borda).
     *   [ ] **RNF04:** Melhorar sistema de logging com níveis configuráveis, rotação de logs e formato estruturado (JSON).
     *   [ ] Melhorar sistema de logging com níveis configuráveis, rotação de logs e formato estruturado (JSON).
-    *   [ ] **RF02/RF07:** Adicionar endpoints para gestão completa de usuários pelo admin global (Listar, Editar, Deletar usuários). Atualmente só existe Criar (`POST /tools/usuarios`).
+    *   [x] **RF02/RF07:** Adicionar endpoints para gestão completa de usuários pelo admin global (Listar, Editar, Deletar usuários). Atualmente só existe Criar (`POST /tools/usuarios`). *(Endpoints GET /usuarios, GET /usuarios/{username_param}, PUT /usuarios/{username_param}, DELETE /usuarios/{username_param} implementados)*
     *   [ ] Refinar/Unificar a lógica de solicitação de acesso a grupos: remover a implementação mais antiga de `app/groups/routes.py` (`solicitar-entrada`, `solicitacoes`, `aprovar`, `rejeitar`) em favor da de `app/groups/requests_routes.py`.
     *   [ ] Implementar persistência de dados em um banco de dados relacional ou NoSQL (atualmente em `rbac.json` e `requests.json`).
-    *   [ ] **RF05:** Criar endpoint para listar ferramentas disponíveis para um usuário (ex: `GET /tools/my_tools` ou `GET /tools/user_tools`) com base em seus grupos e permissões.
+    *   [x] **RF05:** Criar endpoint para listar ferramentas disponíveis para um usuário (ex: `GET /tools/my_tools` ou `GET /tools/user_tools`) com base em seus grupos e permissões. *(Endpoint GET /user_tools implementado)*
     *   [ ] **RF02/RF04:** Avaliar a necessidade de endpoints mais completos para gerenciamento de grupos que retornem/aceitem mais detalhes (descrição, listas de usuários/admins/ferramentas) para alinhar com o frontend (`GroupAdmin.tsx`), ou simplificar o frontend. Os atuais em `app/groups/routes.py` são muito granulares.
 
 4.  **Frontend**
@@ -142,7 +142,7 @@
         *   [ ] **Corrigir API Mismatch (Data Submission):** Ajustar os payloads enviados para criar/editar grupos, adicionar admins/usuários, adicionar ferramentas para corresponder aos endpoints existentes em `app/groups/routes.py`, ou usar/criar novos endpoints backend.
         *   [ ] **Implementar Funcionalidades Faltantes:** Adicionar UI para remover usuários de grupos, promover usuários a admin de grupo, editar/remover ferramentas de grupos.
     *   [ ] **RF05 (Tools.tsx):**
-        *   [ ] Corrigir a lógica de listagem de ferramentas. Utilizar um endpoint backend dedicado (a ser criado) para buscar as ferramentas que o usuário autenticado pode acessar.
+        *   [ ] Corrigir a lógica de listagem de ferramentas. Utilizar o endpoint backend `GET /user_tools` para buscar as ferramentas que o usuário autenticado pode acessar.
     *   [ ] **RF02/RF07 (User Management by Global Admin):**
         *   [ ] Criar nova página/componente para gerenciamento completo de usuários (CRUD) por administradores globais.
         *   [ ] Corrigir a rota `/admin/users` em `AppRouter.tsx` para apontar para este novo componente, em vez de `UserRequests.tsx`.

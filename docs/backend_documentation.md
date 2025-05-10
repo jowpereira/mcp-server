@@ -215,10 +215,10 @@ Os endpoints são divididos em dois roteadores principais montados sob o prefixo
         *   **Response (403):** "Acesso restrito ao admin global."
     *   `GET /usuarios/{username_param}`
         *   **Descrição:** Obtém detalhes de um usuário específico.
-        *   **Auth:** `global_admin`.
+        *   **Auth:** `global_admin` ou o próprio usuário solicitando seus dados.
         *   **Path Param:** `username_param`.
         *   **Response (200):** `UserDetailResponse`
-        *   **Response (403):** "Acesso restrito ao admin global."
+        *   **Response (403):** "Acesso restrito." (Se não for global_admin nem o próprio usuário)
         *   **Response (404):** "Usuário '<username_param>' não encontrado."
     *   `PUT /usuarios/{username_param}`
         *   **Descrição:** Atualiza o papel e/ou grupos de um usuário.

@@ -12,6 +12,17 @@ Este documento registra o histórico de versões e principais mudanças do MCP G
 
 ## Histórico de Versões
 
+## [1.0.3] - 2025-05-10 (Revisão e Atualização da Documentação)
+### Modificado
+- **Documentação Geral:** Realizada uma revisão e atualização abrangente em múltiplos documentos para refletir o estado atual do projeto, funcionalidades implementadas e pendências.
+    - `docs/TODO.md`: Atualizado para marcar endpoints de backend implementados (gerenciamento de usuários, ferramentas do usuário) e ajustar tarefas do frontend relacionadas.
+    - `docs/API.md`: Expandido com uma lista mais detalhada e categorizada dos endpoints da API backend, reforçando o Swagger/ReDoc como fonte primária.
+    - `docs/BACKEND_DOCUMENTATION.md`: Corrigida a descrição do endpoint `GET /tools/usuarios/{username_param}` para indicar que o próprio usuário também pode acessar seus detalhes.
+    - `docs/REQUISITOS.md`: Adicionado o status de implementação (Concluído, Parcialmente Concluído, Pendente, Em Andamento) para os Requisitos Funcionais (RF) e Não-Funcionais (RNF) com base na análise dos demais documentos.
+    - `docs/ARQUITETURA.md`: Detalhada a seção de persistência de dados, mencionados módulos chave do backend e frontend, e adicionado o fluxo de solicitação de acesso a grupos para maior clareza.
+    - `frontend/README.md`: Atualizado para detalhar funcionalidades implementadas e pendentes no frontend, a estrutura de pastas e arquivos, e os scripts NPM disponíveis.
+    - `README.md` (Raiz do Projeto): Melhorada a descrição da estrutura de pastas, expandida a lista de funcionalidades principais, e corrigidos links para a documentação interna.
+
 ## [1.0.2] - 2025-05-10 (Continuação das Correções no Ambiente de Teste e Integridade de Dados)
 ### Corrigido
 - **Estabilidade e Confiabilidade dos Testes de Integração:**

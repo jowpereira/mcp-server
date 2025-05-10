@@ -16,16 +16,26 @@ Este documento apresenta os requisitos essenciais para o desenvolvimento, opera�
 
 ## 1. Requisitos Funcionais
 Definem as funcionalidades obrigatórias para atender as necessidades dos usuários e administradores. Cada requisito funcional deve ser validado por meio de testes e revisões de usabilidade.
+*(Status atualizado em 2025-05-10 com base na documentação e TODOs existentes. Para detalhes da implementação, consulte `docs/BACKEND_DOCUMENTATION.md` e `docs/CHANGELOG.md`.)*
 
 - **RF01:** Permitir login de usuários, administradores de grupo e administrador global via portal web e API.
+    - *Status: Concluído (Backend API e Frontend básico implementados).*
 - **RF02:** Permitir ao administrador global criar, editar e remover grupos, além de designar administradores de grupo.
+    - *Status: Concluído (Endpoints backend implementados: `POST /tools/grupos`, `PUT /tools/grupos/{grupo}`, `DELETE /tools/grupos/{grupo}`, `POST /tools/grupos/{grupo}/admins`).*
 - **RF03:** Permitir ao administrador de grupo adicionar/remover usuários do grupo e promover usuários a administradores do grupo.
+    - *Status: Concluído (Endpoints backend implementados: `POST /tools/grupos/{grupo}/usuarios`, `DELETE /tools/grupos/{grupo}/usuarios/{username}`, `POST /tools/grupos/{grupo}/promover-admin`).*
 - **RF04:** Permitir ao administrador de grupo criar, editar e remover ferramentas do grupo.
+    - *Status: Parcialmente Concluído (Backend permite adicionar/remover ferramentas a grupos: `POST /tools/grupos/{grupo}/ferramentas`, `DELETE /tools/grupos/{grupo}/ferramentas/{tool_id}`. A "criação/edição" de ferramentas no contexto do grupo refere-se principalmente à associação de nomes/IDs de ferramentas, não à definição completa da ferramenta em si dentro do grupo).*
 - **RF05:** Permitir ao usuário comum consumir ferramentas às quais tem acesso.
+    - *Status: Concluído (Endpoints backend implementados: `GET /user_tools` e exemplos como `GET /tools/ferramenta_x`).*
 - **RF06:** Permitir ao usuário solicitar acesso a grupos (workflow de aprovação).
+    - *Status: Concluído (Endpoints backend em `app/groups/requests_routes.py` e Frontend básico implementados).*
 - **RF07:** Permitir ao administrador global auditar todas as ações do sistema, com trilha de auditoria detalhada.
+    - *Status: Pendente (Item em `docs/TODO.md`).*
 - **RF08:** Expor documentação automática e interativa da API (Swagger/Redoc), sempre atualizada.
+    - *Status: Concluído (Fornecido pelo FastAPI em `/docs` e `/redoc`).*
 - **RF09:** Permitir integração futura com banco NoSQL e SSO corporativo, com arquitetura preparada para expansão.
+    - *Status: Pendente (Migração para BD e implementação de SSO são itens futuros em `docs/TODO.md`).*
 
 ---
 
@@ -33,12 +43,19 @@ Definem as funcionalidades obrigatórias para atender as necessidades dos usuár
 Garantem qualidade, segurança, escalabilidade e usabilidade do sistema. Devem ser considerados em todas as fases do ciclo de vida do software.
 
 - **RNF01:** O sistema deve ser seguro, utilizando autenticação JWT e RBAC (controle de acesso baseado em papéis), com proteção contra ataques comuns (XSS, CSRF, etc).
+    - *Status: Parcialmente Concluído (Autenticação JWT e RBAC implementados. Headers de segurança adicionais e revisão de CSRF estão em `docs/TODO.md`).*
 - **RNF02:** O sistema deve ser escalável e modular, pronto para ambientes de produção e fácil de manter.
+    - *Status: Em Andamento (Estrutura modular existe, escalabilidade depende da migração de persistência e otimizações futuras).*
 - **RNF03:** O frontend deve ser responsivo, acessível (WCAG 2.1), e funcionar integrado ao backend.
+    - *Status: Em Andamento (Frontend básico integrado. Responsividade e acessibilidade WCAG 2.1 requerem avaliação e melhorias contínuas).*
 - **RNF04:** O backend deve registrar logs detalhados de todas as ações administrativas e de acesso, com níveis configuráveis.
+    - *Status: Pendente (Melhoria do sistema de logging é um item em `docs/TODO.md`).*
 - **RNF05:** O sistema deve ser facilmente auditável e extensível, com código limpo e documentação técnica.
+    - *Status: Em Andamento (Documentação técnica existe e está sendo revisada. Extensibilidade e auditoria completa dependem de RF07 e RNF04).*
 - **RNF06:** O sistema deve permitir deploy em ambiente cloud (nuvem) ou on-premises (local), com scripts e automação.
+    - *Status: Pendente (Preparação para containerização e deployment são itens em `docs/TODO.md`).*
 - **RNF07:** O frontend deve suportar internacionalização (i18n) e ser preparado para múltiplos idiomas.
+    - *Status: Pendente (Item em `docs/TODO.md`).*
 
 ---
 
